@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "export NODE_ENV=production && node index.js",
+    "dev": "export NODE_ENV=dev && nodemon index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
     "socket.io": "^4.7.2"
   },
   "author": "",

@@ -6,7 +6,10 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3001',
+    origin:
+      process.env.NODE_ENV === 'dev'
+        ? process.env.DEV_CORS_URL
+        : process.env.PROD_CORS_URL,
     methods: ['GET', 'POST'],
     allowedHeaders: ['my-custom-header'],
     credentials: true,
@@ -17,7 +20,7 @@ let rooms = [];
 
 setInterval(() => {
   rooms = [];
-},3600000);
+}, 3600000);
 
 io.on('connection', (socket) => {
   socket.on('join', ({ id, userName, room }) => {
