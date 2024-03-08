@@ -1,6 +1,5 @@
 const express = require('express');
 const { createServer } = require('node:http');
-const { join } = require('node:path');
 const { Server } = require('socket.io');
 
 const app = express();
@@ -14,23 +13,41 @@ const io = new Server(server, {
   },
 });
 
-const rooms = [];
+let rooms = [];
+
+setInterval(() => {
+  rooms = [];
+},3600000);
 
 io.on('connection', (socket) => {
-  socket.on('join', ({ name, room }, callback) => {
-    rooms.push({ id: socket.id, name: name, room: room });
-    console.log(rooms);
+  socket.on('join', ({ id, userName, room }) => {
+    const user = rooms.find((currentRoom) => currentRoom.userId === id);
+    if (user) rooms = rooms.filter((currentRoom) => currentRoom.userId === id);
+    rooms.push({
+      socketId: socket.id,
+      userId: id,
+      userName: userName,
+      room: room,
+    });
     socket.join(room);
-    console.log(`User ${name} joined ${room}`);
-    callback();
+    io.to(room).emit('user joined', {
+      joinedUserId: id,
+      joinedUserName: userName,
+    });
   });
-  // socket.on("disconnect", () => {
-  //   const user = rooms.find((currentRoom) => currentRoom.id === socket.id);
-  //   io.to(user.room).emit("chat message", `${user.name} just left the room`);
-  // });
-  socket.on('chat message', ({ name, room, message }) => {
-    console.log(`Message to room: ${room} from ${name}: ${message}`);
-    io.to(room).emit('chat message', { name, ackRoom: room, message });
+  socket.on('disconnect', () => {
+    console.log(socket.id);
+    const user = rooms.find((currentRoom) => currentRoom.socketId == socket.id);
+    if (user) {
+      io.to(user.room).emit('user disconnected', {
+        disconnectedUserId: user.userId,
+        disconnectedUserName: user.userName,
+      });
+      rooms = rooms.filter((room) => room.socketId === socket.id);
+    }
+  });
+  socket.on('message sent', ({ id, userName, room, message }) => {
+    io.to(room).emit('message received', { id, userName, message });
   });
 });
 
