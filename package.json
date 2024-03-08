@@ -8,6 +8,7 @@
     "dev": "set NODE_ENV=dev&& nodemon index.js"
   },
   "dependencies": {
+    "express": "^4.18.3",
     "socket.io": "^4.7.2"
   },
   "author": "",
