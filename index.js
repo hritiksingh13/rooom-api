@@ -11,8 +11,6 @@ const io = new Server(server, {
         ? process.env.DEV_CORS_URL
         : process.env.PROD_CORS_URL,
     methods: ['GET', 'POST'],
-    allowedHeaders: ['my-custom-header'],
-    credentials: true,
   },
 });
 
@@ -23,7 +21,7 @@ setInterval(() => {
 }, 3600000);
 
 io.on('connection', (socket) => {
-  socket.on('join', ({ id, userName, room }) => {
+  socket.on('join', ({ id, userName, room }, callback) => {
     const user = rooms.find((currentRoom) => currentRoom.userId === id);
     if (user) rooms = rooms.filter((currentRoom) => currentRoom.userId === id);
     rooms.push({
@@ -32,28 +30,42 @@ io.on('connection', (socket) => {
       userName: userName,
       room: room,
     });
-    socket.join(room);
-    io.to(room).emit('user joined', {
-      joinedUserId: id,
-      joinedUserName: userName,
-    });
-  });
-  socket.on('disconnect', () => {
-    console.log(socket.id);
-    const user = rooms.find((currentRoom) => currentRoom.socketId == socket.id);
-    if (user) {
-      io.to(user.room).emit('user disconnected', {
-        disconnectedUserId: user.userId,
-        disconnectedUserName: user.userName,
+    try {
+      socket.join(room);
+      io.to(room).emit('user joined', {
+        joinedUserId: id,
+        joinedUserName: userName,
       });
-      rooms = rooms.filter((room) => room.socketId === socket.id);
+      callback(`User ${userName} successfully joined with id: ${id}`);
+    } catch (err) {
+      callback(err);
     }
   });
-  socket.on('message sent', ({ id, userName, room, message }) => {
-    io.to(room).emit('message received', { id, userName, message });
+  socket.on('disconnect', () => {
+    const user = rooms.find((currentRoom) => currentRoom.socketId == socket.id);
+    if (user) {
+      try {
+        io.to(user.room).emit('user disconnected', {
+          disconnectedUserId: user.userId,
+          disconnectedUserName: user.userName,
+        });
+        rooms = rooms.filter((room) => room.socketId === socket.id);
+        console.log(`User ${user.name} disconnected`);
+      } catch (err) {
+        console.log(err);
+      }
+    }
+  });
+  socket.on('message sent', ({ id, userName, room, message }, callback) => {
+    try {
+      io.to(room).emit('message received', { id, userName, message });
+      callback(`User ${userName} sent a message '${message}' to room: ${room}`);
+    } catch (err) {
+      callback(err);
+    }
   });
 });
 
 server.listen(3000, () => {
-  console.log('server is now running at http://localhost:3000');
+  console.log('server is now running on port 3000');
 });
