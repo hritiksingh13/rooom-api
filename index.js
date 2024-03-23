@@ -24,21 +24,25 @@ io.on('connection', (socket) => {
   socket.on('join', ({ id, userName, room }, callback) => {
     const user = rooms.find((currentRoom) => currentRoom.userId === id);
     if (user) rooms = rooms.filter((currentRoom) => currentRoom.userId === id);
-    rooms.push({
-      socketId: socket.id,
-      userId: id,
-      userName: userName,
-      room: room,
-    });
     try {
+      callback(
+        rooms
+          .filter((rooom) => rooom.room === room && rooom.userId !== id)
+          .map((user) => ({ id: user.userId, userName: user.userName }))
+      );
+      rooms.push({
+        socketId: socket.id,
+        userId: id,
+        userName: userName,
+        room: room,
+      });
       socket.join(room);
       io.to(room).emit('user joined', {
         joinedUserId: id,
         joinedUserName: userName,
       });
-      callback(`User ${userName} successfully joined with id: ${id}`);
     } catch (err) {
-      callback(err);
+      console.log(err);
     }
   });
   socket.on('disconnect', () => {
@@ -50,7 +54,7 @@ io.on('connection', (socket) => {
           disconnectedUserName: user.userName,
         });
         rooms = rooms.filter((room) => room.socketId === socket.id);
-        console.log(`User ${user.name} disconnected`);
+        console.log(`User ${user.userName} disconnected`);
       } catch (err) {
         console.log(err);
       }
